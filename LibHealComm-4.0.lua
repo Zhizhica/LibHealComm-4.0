@@ -85,8 +85,8 @@ local spellRankTableData = {
 	[8] = { 9839, 9857, 9758, 10329, 10928, 10395, 10839, 23568, 24413, 25233, 27259, 27220 },
 	[9] = { 9840, 9858, 9888, 25292, 10929, 10396, 18608, 25235 },
 	[10] = { 9841, 9889, 25315, 25357, 18610, 23567, 24414, 26980, 27135 },
-	[11] = { 25299, 25297, 30020, 27136, 25221, 25391 },
-	[12] = { 26981, 26978, 25222, 25396 },
+	[11] = { 25299, 25297, 30020, 27136, 25221, 25391, 27030 },
+	[12] = { 26981, 26978, 25222, 25396, 27031},
 	[13] = { 26982, 26979 },
 }
 
@@ -169,6 +169,18 @@ local function AddHot(Data, IDs)
 	table.insert(spellDesc, Data)
 	local idTable = Set(Data, IDs)
 	TableAppend(hotData, idTable)
+end
+--end
+
+--[[
+Function to add new spell to spell table
+Data: spell description table
+IDs: list of id for each rank of the spell
+--]]
+local function AddSpell(Data, IDs)
+	table.insert(spellDesc, Data)
+	local idTable = Set(Data, IDs)
+	TableAppend(spellData, idTable)
 end
 --end
 
@@ -787,18 +799,7 @@ end
 
 local CalculateHealing, GetHealTargets, AuraHandler, CalculateHotHealing, ResetChargeData, LoadClassData
 
-local function getBaseHealAmount(spellData, spellName, spellRank)
-	spellData = spellData[spellName]
-	local average = spellData.averages[spellRank]
-	if type(average) == "number" then
-		return average
-	end
-	local requiresLevel = spellData.levels[spellRank]
-	return average[min(playerLevel - requiresLevel + 1, #average)]
-end
-
---Function copies functionality of getBaseHealAmount but uses spellID as an argument instead of spellName
-local function getBaseHealAmountBYID(spellData, spellID, spellRank)
+local function getBaseHealAmount(spellData, spellID, spellRank)
 	spellData = spellData[spellID]
 	local average = spellData.averages[spellRank]
 	if type(average) == "number" then
@@ -822,17 +823,20 @@ if( playerClass == "DRUID" ) then
 		local EmpoweredTouch = GetSpellInfo(33879) or "EmpoweredTouch"
 
 		--Regrowth
-		local RegrowthHot = { interval = 3, ticks = 7, coeff = isTBC and 0.7 or 0.5, levels = { 12, 18, 24, 30, 36, 42, 48, 54, 60, 65 },
+		local RegrowthHot = {interval = 3, ticks = 7, coeff = isTBC and 0.7 or 0.5,
+							levels = { 12, 18, 24, 30, 36, 42, 48, 54, 60, 65 },
 							averages = { 98, 175, 259, 343, 427, 546, 686, 861, 1064, 1274}}
-		AddHot(RegrowthHot, {8936, 8938, 8939, 8940, 8941, 9750, 9856, 9857, 9858, 26980})
+		local RegrowthIDs = {8936, 8938, 8939, 8940, 8941, 9750, 9856, 9857, 9858, 26980}
+		AddHot(RegrowthHot, RegrowthIDs)
 		--Rejuvenation
-		AddHot({ interval = 3, levels = { 4, 10, 16, 22, 28, 34, 40, 46, 52, 58, 60, 63, 69 },
+		AddHot({interval = 3, levels = { 4, 10, 16, 22, 28, 34, 40, 46, 52, 58, 60, 63, 69 },
 				averages = { 32, 56, 116, 180, 244, 304, 388, 488, 608, 756, 888, 932, 1060 }},
 				{774, 1058, 1430, 2090, 2091, 3627, 8910, 9839, 9840, 9841, 25299, 26981, 26982})
 		--Revewal
 		AddHot({interval = 1, ticks = 7, coeff = 0.52, dhCoeff = 0.34335, levels = {64}, averages = {273}, bomb = {600}}, {33763})
 
-		spellData[HealingTouch] = { levels = {1, 8, 14, 20, 26, 32, 38, 44, 50, 56, 60, 62, 69}, averages = {
+		--Healing Touch
+		AddSpell({levels = {1, 8, 14, 20, 26, 32, 38, 44, 50, 56, 60, 62, 69}, averages = {
 			{avg(37, 51), avg(37, 52), avg(38, 53), avg(39, 54), avg(40, 55)},
 			{avg(88, 112), avg(89, 114), avg(90, 115), avg(91, 116), avg(93, 118), avg(94, 119)},
 			{avg(195, 243), avg(196, 245), avg(198, 247), avg(200, 249), avg(202, 251), avg(204, 253)},
@@ -845,8 +849,10 @@ if( playerClass == "DRUID" ) then
 			{avg(1890, 2230), avg(1896, 2237), avg(1903, 2244), avg(1909, 2250), avg(1916, 2257), avg(1923, 2263)},
 			{avg(2267, 2677), avg(2274, 2685), avg(2281, 2692), avg(2288, 2699), avg(2296, 2707), avg(2303, 2714)},
 			{avg(2364, 2790), avg(2371, 2798), avg(2378, 2805), avg(2386, 2813), avg(2393, 2820), avg(2401, 2827)},
-			{avg(2707, 3197), avg(2715, 3206)} }}
-		spellData[Regrowth] = {coeff = 0.5 * (2 / 3.5) , levels = RegrowthHot.levels, averages = {
+			{avg(2707, 3197), avg(2715, 3206)} }},
+			{5185, 5186, 5187, 5188, 5189, 6778, 8903, 9758, 9888, 9889, 25297, 26978, 26979})
+		--Regrowth
+		AddSpell({coeff = 0.5 * (2 / 3.5) , levels = RegrowthHot.levels, averages = {
 			{avg(84, 98), avg(85, 100), avg(87, 102), avg(89, 104), avg(91, 106), avg(93, 107)},
 			{avg(164, 188), avg(166, 191), avg(169, 193), avg(171, 196), avg(174, 198), avg(176, 201)},
 			{avg(240, 274), avg(243, 278), avg(246, 281), avg(249, 284), avg(252, 287), avg(255, 290)},
@@ -856,20 +862,24 @@ if( playerClass == "DRUID" ) then
 			{avg(646, 724), avg(651, 730), avg(656, 735), avg(661, 740), avg(667, 746), avg(672, 751)},
 			{avg(809, 905), avg(815, 911), avg(821, 917), avg(827, 923), avg(833, 929), avg(839, 935)},
 			{avg(1003, 1119), avg(1009, 1126), avg(1016, 1133), avg(1023, 1140), avg(1030, 1147), avg(1037, 1153)},
-			{avg(1215, 1355), avg(1222, 1363), avg(1230, 1371), avg(1238, 1379), avg(1245, 1386), avg(1253, 1394)} }}
+			{avg(1215, 1355), avg(1222, 1363), avg(1230, 1371), avg(1238, 1379), avg(1245, 1386), avg(1253, 1394)} }},
+			RegrowthIDs)
+		--Tranquility
 		if isTBC then
-			spellData[Tranquility] = {coeff = 1.145, ticks = 4, interval = 2, levels = {30, 40, 50, 60, 70}, averages = {
+			AddSpell({coeff = 1.145, ticks = 4, interval = 2, levels = {30, 40, 50, 60, 70}, averages = {
 				{351 * 4, 354 * 4, 356 * 4, 358 * 4, 360 * 4, 362 * 4, 365 * 4},
 				{515 * 4, 518 * 4, 521 * 4, 523 * 4, 526 * 4, 528 * 4, 531 * 4},
 				{765 * 4, 769 * 4, 772 * 4, 776 * 4, 779 * 4, 782 * 4, 786 * 4},
 				{1097 * 4, 1101 * 4, 1105 * 4, 1109 * 4, 1112 * 4, 1116 * 4, 1120 * 4},
-				{1518 * 4} }}
+				{1518 * 4} }},
+				{740, 8918, 9862, 9863, 26983})
 		else
-			spellData[Tranquility] = {coeff = 1/3, ticks = 5, interval = 2, levels = {30, 40, 50, 60}, averages = {
+			AddSpell({coeff = 1/3, ticks = 5, interval = 2, levels = {30, 40, 50, 60}, averages = {
 				{94 * 5, 95 * 5, 96 * 5, 96 * 5, 97 * 5, 97 * 5, 98 * 5},
 				{138 * 5, 139 * 5, 140 * 5, 141 * 5, 141 * 5, 142 * 5, 143 * 5},
 				{205 * 5, 206 * 5, 207 * 5, 208 * 5, 209 * 5, 210 * 5, 211 * 5},
-				{294 * 5} }}
+				{294 * 5} }},
+				{740, 8918, 9862, 9863})
 		end
 
 		talentData[GiftofNature] = {mod = 0.02, current = 0}
@@ -905,7 +915,7 @@ if( playerClass == "DRUID" ) then
 		-- Calculate hot heals
 		CalculateHotHealing = function(guid, spellID)
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
-			local healAmount = getBaseHealAmountBYID(hotData, spellID, spellRank)
+			local healAmount = getBaseHealAmount(hotData, spellID, spellRank)
 			local spellPower = GetSpellBonusHealing()
 			local healModifier = HealComm:GetHealModifier(guid) * playerHealModifier
 			local spModifier = 1
@@ -991,7 +1001,7 @@ if( playerClass == "DRUID" ) then
 		-- Calcualte direct and channeled heals
 		CalculateHealing = function(guid, spellID)
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
-			local healAmount = getBaseHealAmount(spellData, spellName, spellRank)
+			local healAmount = getBaseHealAmount(spellData, spellID, spellRank)
 			local spellPower = GetSpellBonusHealing()
 			local healModifier = HealComm:GetHealModifier(guid) * playerHealModifier
 			local spModifier = 1
@@ -1006,7 +1016,7 @@ if( playerClass == "DRUID" ) then
 
 			-- Regrowth
 			if( spellName == Regrowth ) then
-				spellPower = spellPower * spellData[spellName].coeff
+				spellPower = spellPower * spellData[spellID].coeff
 			-- Healing Touch
 			elseif( spellName == HealingTouch ) then
 				
@@ -1027,20 +1037,20 @@ if( playerClass == "DRUID" ) then
 				
 			-- Tranquility
 			elseif( spellName == Tranquility ) then
-				spellPower = spellPower * spellData[spellName].coeff * (1 + talentData[EmpoweredRejuv].current)
-				spellPower = spellPower / spellData[spellName].ticks
-				healAmount = healAmount / spellData[spellName].ticks
+				spellPower = spellPower * spellData[spellID].coeff * (1 + talentData[EmpoweredRejuv].current)
+				spellPower = spellPower / spellData[spellID].ticks
+				healAmount = healAmount / spellData[spellID].ticks
 			end
 
-			healAmount = calculateGeneralAmount(spellData[spellName].levels[spellRank], healAmount, spellPower, spModifier, healModifier)
+			healAmount = calculateGeneralAmount(spellData[spellID].levels[spellRank], healAmount, spellPower, spModifier, healModifier)
 
 			-- 100% chance to crit with Nature, this mostly just covers fights like Loatheb where you will basically have 100% crit
 			if( GetSpellCritChance(4) >= 100 ) then
 				healAmount = healAmount * 1.50
 			end
 
-			if( spellData[spellName].ticks ) then
-				return CHANNEL_HEALS, ceil(healAmount), spellData[spellName].ticks, spellData[spellName].interval
+			if( spellData[spellID].ticks ) then
+				return CHANNEL_HEALS, ceil(healAmount), spellData[spellID].ticks, spellData[spellID].interval
 			end
 
 			return DIRECT_HEALS, ceil(healAmount)
@@ -1057,7 +1067,8 @@ if( playerClass == "PALADIN" ) then
 		local HealingLight = GetSpellInfo(20237)
 		local HolyLight = GetSpellInfo(635)
 
-		spellData[HolyLight] = { coeff = 2.5 / 3.5, levels = {1, 6, 14, 22, 30, 38, 46, 54, 60, 62, 70}, averages = {
+		--HolyLight
+		AddSpell({coeff = 2.5 / 3.5, levels = {1, 6, 14, 22, 30, 38, 46, 54, 60, 62, 70}, averages = {
 			{avg(39, 47), avg(39, 48), avg(40, 49), avg(41, 50), avg(42, 51)},
 			{avg(76, 90), avg(77, 92), avg(78, 93), avg(79, 94), avg(80, 95), avg(81, 96)},
 			{avg(159, 187), avg(160, 189), avg(162, 191), avg(164, 193), avg(165, 194), avg(167, 196)},
@@ -1068,15 +1079,18 @@ if( playerClass == "PALADIN" ) then
 			{avg(1246, 1388), avg(1251, 1394), avg(1256, 1399), avg(1261, 1404), avg(1266, 1409), avg(1272, 1414)},
 			{avg(1590, 1770), avg(1595, 1775), avg(1601, 1781), avg(1607, 1787), avg(1613, 1793), avg(1619, 1799)},
 			{avg(1741, 1939), avg(1747, 1946), avg(1753, 1952), avg(1760, 1959), avg(1766, 1965), avg(1773, 1971)},
-			{avg(2196, 2446)} }}
-		spellData[FlashofLight] = { coeff = 1.5 / 3.5, levels = {20, 26, 34, 42, 50, 58, 66}, averages = {
+			{avg(2196, 2446)} }},
+			{635, 639, 647, 1026, 1042, 3472, 10328, 10329, 25292, 27135, 27136})
+		--FlashofLight
+		AddSpell({coeff = 1.5 / 3.5, levels = {20, 26, 34, 42, 50, 58, 66}, averages = {
 			{avg(62, 72), avg(63, 73), avg(64, 74), avg(65, 75), avg(66, 76), avg(67, 77)},
 			{avg(96, 110), avg(97, 112), avg(98, 113), avg(99, 114), avg(101, 116), avg(102, 117)},
 			{avg(145, 163), avg(146, 165), avg(148, 167), avg(149, 168), avg(151, 170), avg(153, 171)},
 			{avg(197, 221), avg(198, 223), avg(200, 225), avg(202, 227), avg(204, 229), avg(206, 231)},
 			{avg(267, 299), avg(269, 302), avg(271, 304), avg(273, 306), avg(275, 308), avg(278, 310)},
 			{avg(343, 383), avg(345, 386), avg(348, 389), avg(350, 391), avg(353, 394), avg(356, 396)},
-			{avg(448, 502), avg(450, 505), avg(453, 508), avg(455, 510), avg(458, 513)} }}
+			{avg(448, 502), avg(450, 505), avg(453, 508), avg(455, 510), avg(458, 513)} }},
+			{19750, 19939, 19940, 19941, 19942, 19943, 27137})
 
 		talentData[HealingLight] = { mod = 0.04, current = 0 }
 
@@ -1123,7 +1137,7 @@ if( playerClass == "PALADIN" ) then
 
 		CalculateHealing = function(guid, spellID, unit)
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
-			local healAmount = getBaseHealAmount(spellData, spellName, spellRank)
+			local healAmount = getBaseHealAmount(spellData, spellID, spellRank)
 			local spellPower = GetSpellBonusHealing()
 			local healModifier = HealComm:GetHealModifier(guid) * playerHealModifier
 			local spModifier = 1
@@ -1144,19 +1158,19 @@ if( playerClass == "PALADIN" ) then
 
 			if( equippedSetCache["Lightbringer"] >= 4 and spellName == FlashofLight ) then healModifier = healModifier + 0.05 end
 
-			spellPower = spellPower * spellData[spellName].coeff
-			healAmount = calculateGeneralAmount(spellData[spellName].levels[spellRank], healAmount, spellPower, spModifier, healModifier)
+			spellPower = spellPower * spellData[spellID].coeff
+			healAmount = calculateGeneralAmount(spellData[spellID].levels[spellRank], healAmount, spellPower, spModifier, healModifier)
 
 			for auraID, values in pairs(blessings) do
 				if unitHasAura(unit, auraID) then
 					if playerCurrentRelic == 28592 then
 						if spellName == FlashofLight then
-							healAmount = calculateGeneralAmount(spellData[spellName].levels[spellRank], healAmount, values[spellName] + 60, healModifier, 1)
+							healAmount = calculateGeneralAmount(spellData[spellID].levels[spellRank], healAmount, values[spellName] + 60, healModifier, 1)
 						else
-							healAmount = calculateGeneralAmount(spellData[spellName].levels[spellRank], healAmount, values[spellName] + 120, healModifier, 1)
+							healAmount = calculateGeneralAmount(spellData[spellID].levels[spellRank], healAmount, values[spellName] + 120, healModifier, 1)
 						end
 					else
-						healAmount = calculateGeneralAmount(spellData[spellName].levels[spellRank], healAmount, values[spellName], healModifier, 1)
+						healAmount = calculateGeneralAmount(spellData[spellID].levels[spellRank], healAmount, values[spellName], healModifier, 1)
 					end
 					break
 				end
@@ -1196,7 +1210,8 @@ if( playerClass == "PRIEST" ) then
 		--Renewal
 		AddHot({coeff = 0, interval = 3, ticks = 3, levels = {70}, averages = {150}}, {37563})
 
-		spellData[FlashHeal] = {coeff = 1.5 / 3.5, levels = {20, 26, 32, 38, 44, 50, 56, 61, 67}, averages = {
+		--FlashHeal
+		AddSpell({coeff = 1.5 / 3.5, levels = {20, 26, 32, 38, 44, 50, 56, 61, 67}, averages = {
 			{avg(193, 237), avg(194, 239), avg(196, 241), avg(198, 243),  avg(200, 245), avg(202, 247)},
 			{avg(258, 314), avg(260, 317), avg(262, 319), avg(264, 321), avg(266, 323), avg(269, 325)},
 			{avg(327, 393), avg(329, 396), avg(332, 398), avg(334, 401), avg(337, 403), avg(339, 406)},
@@ -1205,33 +1220,44 @@ if( playerClass == "PRIEST" ) then
 			{avg(644, 764), avg(647, 768), avg(651, 772), avg(655, 776), avg(658, 779), avg(662, 783)},
 			{avg(812, 958), avg(816, 963), avg(820, 967), avg(824, 971), avg(828, 975), avg(833, 979)},
 			{avg(913, 1059), avg(917, 1064), avg(922, 1069), avg(927, 1074), avg(931, 1078)},
-			{avg(1101, 1279), avg(1106, 1285), avg(1111, 1290), avg(1116, 1295)} }}
-		spellData[GreaterHeal] = {coeff = 3 / 3.5, levels = {40, 46, 52, 58, 60, 63, 68}, averages = {
+			{avg(1101, 1279), avg(1106, 1285), avg(1111, 1290), avg(1116, 1295)} }},
+			{2061, 9472, 9473, 9474, 10915, 10916, 10917, 25233, 25235})
+		--GreaterHeal
+		AddSpell({coeff = 3 / 3.5, levels = {40, 46, 52, 58, 60, 63, 68}, averages = {
 			{avg(899, 1013), avg(904, 1019), avg(909, 1024), avg(914, 1029), avg(919, 1034), avg(924, 1039)},
 			{avg(1149, 1289), avg(1154, 1295), avg(1160, 1301), avg(1166, 1307), avg(1172, 1313), avg(1178, 1318)},
 			{avg(1437, 1609), avg(1443, 1616), avg(1450, 1623), avg(1456, 1629), avg(1463, 1636), avg(1470, 1642)},
 			{avg(1798, 2006), avg(1805, 2014), avg(1813, 2021), avg(1820, 2029), avg(1828, 2036), avg(1835, 2044)},
 			{avg(1966, 2194), avg(1974, 2203), avg(1982, 2211), avg(1990, 2219), avg(1998, 2227), avg(2006, 2235)},
 			{avg(2074, 2410), avg(2082, 2419), avg(2090, 2427), avg(2099, 2436), avg(2107, 2444)},
-			{avg(2396, 2784), avg(2405, 2794), avg(2414, 2803)} }}
-		spellData[Heal] = {coeff = 3 / 3.5, levels = {16, 22, 28, 34}, averages = {
+			{avg(2396, 2784), avg(2405, 2794), avg(2414, 2803)} }},
+			{2060, 10963, 10964, 10965, 25314, 25210, 25213})
+		--Heal
+		AddSpell({coeff = 3 / 3.5, levels = {16, 22, 28, 34}, averages = {
 			{avg(295, 341), avg(297, 344), avg(299, 346), avg(302, 349), avg(304, 351), avg(307, 353)},
 			{avg(429, 491), avg(432, 495), avg(435, 498), avg(438, 501), avg(441, 504), avg(445, 507)},
 			{avg(566, 642), avg(570, 646), avg(574, 650), avg(578, 654), avg(582, 658), avg(586, 662)},
-			{avg(712, 804), avg(716, 809), avg(721, 813), avg(725, 818), avg(730, 822), avg(734, 827)} }}
-		spellData[LesserHeal] = {levels = {1, 4, 10}, averages = {
+			{avg(712, 804), avg(716, 809), avg(721, 813), avg(725, 818), avg(730, 822), avg(734, 827)} }},
+			{2054, 2055, 6063, 6064})
+		--LesserHeal
+		AddSpell({levels = {1, 4, 10}, averages = {
 			{avg(46, 56), avg(46, 57), avg(47, 58)},
 			{avg(71, 85), avg(72, 87), avg(73, 88), avg(74, 89), avg(75, 90), avg(76, 91)},
-			{avg(135, 157), avg(136, 159), avg(138, 161), avg(139, 162), avg(141, 164), avg(143, 165)} }}
-		spellData[PrayerofHealing] = {coeff = isTBC and 0.431596 or (3/3.5/3), levels = {30, 40, 50, 60, 60, 68}, averages = {
+			{avg(135, 157), avg(136, 159), avg(138, 161), avg(139, 162), avg(141, 164), avg(143, 165)} }},
+			{2050, 2052, 2053})
+		--PrayerofHealing
+		AddSpell({coeff = isTBC and 0.431596 or (3/3.5/3), levels = {30, 40, 50, 60, 60, 68}, averages = {
 			{avg(301, 321), avg(302, 323), avg(303, 324), avg(304, 325), avg(306, 327), avg(307, 328), avg(308, 329), avg(310, 331), avg(311, 332), avg(312, 333)},
 			{avg(444, 472), avg(445, 474), avg(447, 476), avg(448, 477), avg(450, 479), avg(452, 480), avg(453, 482), avg(455, 484), avg(456, 485), avg(458, 487)},
 			{avg(657, 695), avg(659, 697), avg(661, 699), avg(663, 701), avg(665, 703), avg(667, 705), avg(669, 707), avg(671, 709), avg(673, 711), avg(675, 713)},
 			{avg(939, 991), avg(941, 994), avg(943, 996), avg(946, 999), avg(948, 1001), avg(951, 1003), avg(953, 1006), avg(955, 1008), avg(958, 1011), avg(960, 1013)},
 			{avg(997, 1053), avg(999, 1056), avg(1002, 1058), avg(1004, 1061), avg(1007, 1063), avg(1009, 1066), avg(1012, 1068), avg(1014, 1071), avg(1017, 1073), avg(1019, 1076)},
-			{avg(1246, 1316), avg(1248, 1319), avg(1251, 1322)} }}
-		spellData[BindingHeal] = {coeff = 1.5 / 3.5, levels = {64}, averages = {
-			{avg(1042, 1338), avg(1043, 1340), avg(1045, 1342), avg(1047, 1344), avg(1049, 1346), avg(1051, 1348), avg(1053, 1350)} }}
+			{avg(1246, 1316), avg(1248, 1319), avg(1251, 1322)} }},
+			{596, 996, 10960, 10961, 25316, 25308})
+		--BindingHeal
+		AddSpell({coeff = 1.5 / 3.5, levels = {64}, averages = {
+			{avg(1042, 1338), avg(1043, 1340), avg(1045, 1342), avg(1047, 1344), avg(1049, 1346), avg(1051, 1348), avg(1053, 1350)} }},
+			{32546})
 
 		talentData[ImprovedRenew] = {mod = 0.05, current = 0}
 		talentData[SpiritualHealing] = {mod = 0.02, current = 0}
@@ -1269,7 +1295,7 @@ if( playerClass == "PRIEST" ) then
 
 		CalculateHotHealing = function(guid, spellID)
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
-			local healAmount = getBaseHealAmountBYID(hotData, spellID, spellRank)
+			local healAmount = getBaseHealAmount(hotData, spellID, spellRank)
 			local spellPower = GetSpellBonusHealing()
 			local healModifier = HealComm:GetHealModifier(guid) * playerHealModifier
 			local spModifier = 1
@@ -1312,7 +1338,7 @@ if( playerClass == "PRIEST" ) then
 		-- If only every other class was as easy as Paladins
 		CalculateHealing = function(guid, spellID)
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
-			local healAmount = getBaseHealAmount(spellData, spellName, spellRank)
+			local healAmount = getBaseHealAmount(spellData, spellID, spellRank)
 			local spellPower = GetSpellBonusHealing()
 			local healModifier = HealComm:GetHealModifier(guid) * playerHealModifier
 			local spModifier = 1
@@ -1327,28 +1353,28 @@ if( playerClass == "PRIEST" ) then
 			if( spellName == GreaterHeal ) then
 				if( equippedSetCache["Absolution"] >= 4 ) then healModifier = healModifier * 1.05 end
 				healAmount = healAmount + (spellPower * (talentData[EmpoweredHealing].current * 2))
-				spellPower = spellPower * spellData[spellName].coeff
+				spellPower = spellPower * spellData[spellID].coeff
 			-- Flash Heal
 			elseif( spellName == FlashHeal ) then
 				healAmount = healAmount + (spellPower * talentData[EmpoweredHealing].current)
-				spellPower = spellPower * spellData[spellName].coeff
+				spellPower = spellPower * spellData[spellID].coeff
 			-- Binding Heal
 			elseif( spellName == BindingHeal ) then
 				healAmount = healAmount + (spellPower * talentData[EmpoweredHealing].current)
-				spellPower = spellPower * spellData[spellName].coeff
+				spellPower = spellPower * spellData[spellID].coeff
 			-- Prayer of Healing
 			elseif( spellName == PrayerofHealing ) then
-				spellPower = spellPower * spellData[spellName].coeff
+				spellPower = spellPower * spellData[spellID].coeff
 			-- Heal
 			elseif( spellName == Heal ) then
-				spellPower = spellPower * spellData[spellName].coeff
+				spellPower = spellPower * spellData[spellID].coeff
 			-- Lesser Heal
 			elseif( spellName == LesserHeal ) then
 				local castTime = spellRank >= 3 and 2.5 or spellRank == 2 and 2 or 1.5
 				spellPower = spellPower * (castTime / 3.5)
 			end
 
-			healAmount = calculateGeneralAmount(spellData[spellName].levels[spellRank], healAmount, spellPower, spModifier, healModifier)
+			healAmount = calculateGeneralAmount(spellData[spellID].levels[spellRank], healAmount, spellPower, spModifier, healModifier)
 
 			-- Player has over a 100% chance to crit with Holy spells
 			if( GetSpellCritChance(2) >= 100 ) then
@@ -1369,13 +1395,16 @@ if( playerClass == "SHAMAN" ) then
 		local HealingWay = GetSpellInfo(29206)
 		local Purification = GetSpellInfo(16178)
 
-		spellData[ChainHeal] = {coeff = 2.5 / 3.5, levels = {40, 46, 54, 61, 68}, averages = {
+		--ChainHeal
+		AddSpell({coeff = 2.5 / 3.5, levels = {40, 46, 54, 61, 68}, averages = {
 			{avg(320, 368), avg(322, 371), avg(325, 373), avg(327, 376), avg(330, 378), avg(332, 381)},
 			{avg(405, 465), avg(407, 468), avg(410, 471), avg(413, 474), avg(416, 477), avg(419, 479)},
 			{avg(551, 629), avg(554, 633), avg(557, 636), avg(560, 639), avg(564, 643), avg(567, 646)},
 			{avg(605, 691), avg(608, 695), avg(612, 699), avg(616, 703), avg(620, 707), avg(624, 710)},
-			{avg(826, 942), avg(829, 946), avg(833, 950)} }}
-		spellData[HealingWave] = {levels = {1, 6, 12, 18, 24, 32, 40, 48, 56, 60, 63, 70}, averages = {
+			{avg(826, 942), avg(829, 946), avg(833, 950)} }},
+			{1064, 10622, 10623, 25422, 25423})
+		--HealingWave
+		AddSpell({levels = {1, 6, 12, 18, 24, 32, 40, 48, 56, 60, 63, 70}, averages = {
 			{avg(34, 44), avg(34, 45), avg(35, 46), avg(36, 47)},
 			{avg(64, 78), avg(65, 79), avg(66, 80), avg(67, 81), avg(68, 82), avg(69, 83)},
 			{avg(129, 155), avg(130, 157), avg(132, 158), avg(133, 160), avg(135, 161), avg(136, 163)},
@@ -1387,15 +1416,18 @@ if( playerClass == "SHAMAN" ) then
 			{avg(1367, 1561), avg(1372, 1567), avg(1378, 1572), avg(1383, 1578), avg(1389, 1583), avg(1394, 1589)},
 			{avg(1620, 1850), avg(1625, 1856), avg(1631, 1861), avg(1636, 1867), avg(1642, 1872), avg(1647, 1878)},
 			{avg(1725, 1969), avg(1731, 1976), avg(1737, 1982), avg(1743, 1988), avg(1750, 1995), avg(1756, 2001)},
-			{avg(2134, 2436)} }}
-		spellData[LesserHealingWave] = {coeff = 1.5 / 3.5, levels = {20, 28, 36, 44, 52, 60, 66}, averages = {
+			{avg(2134, 2436)} }},
+			{331, 332, 547, 913, 939, 959, 8005, 10395, 10396, 25357, 25391, 25396})
+		--LesserHealingWave
+		AddSpell({coeff = 1.5 / 3.5, levels = {20, 28, 36, 44, 52, 60, 66}, averages = {
 			{avg(162, 186), avg(163, 188), avg(165, 190), avg(167, 192), avg(168, 193), avg(170, 195)},
 			{avg(247, 281), avg(249, 284), avg(251, 286), avg(253, 288), avg(255, 290), avg(257, 292)},
 			{avg(337, 381), avg(339, 384), avg(342, 386), avg(344, 389), avg(347, 391), avg(349, 394)},
 			{avg(458, 514), avg(461, 517), avg(464, 520), avg(467, 523), avg(470, 526), avg(473, 529)},
 			{avg(631, 705), avg(634, 709), avg(638, 713), avg(641, 716), avg(645, 720), avg(649, 723)},
 			{avg(832, 928), avg(836, 933), avg(840, 937), avg(844, 941), avg(848, 945), avg(853, 949)},
-			{avg(1039, 1185), avg(1043, 1190), avg(1047, 1194), avg(1051, 1198)} }}
+			{avg(1039, 1185), avg(1043, 1190), avg(1047, 1194), avg(1051, 1198)} }},
+			{8004, 8008, 8010, 10466, 10467, 10468, 25420})
 
 		talentData[HealingWay] = {mod = 0, current = 0}
 		talentData[ImpChainHeal] = {mod = 0.10, current = 0}
@@ -1413,7 +1445,7 @@ if( playerClass == "SHAMAN" ) then
 		-- If only every other class was as easy as Paladins
 		CalculateHealing = function(guid, spellID, unit)
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
-			local healAmount = getBaseHealAmount(spellData, spellName, spellRank)
+			local healAmount = getBaseHealAmount(spellData, spellID, spellRank)
 			local spellPower = GetSpellBonusHealing()
 			local healModifier = HealComm:GetHealModifier(guid) * playerHealModifier
 			local spModifier = 1
@@ -1427,7 +1459,7 @@ if( playerClass == "SHAMAN" ) then
 
 			-- Chain Heal
 			if( spellName == ChainHeal ) then
-				spellPower = spellPower * spellData[spellName].coeff
+				spellPower = spellPower * spellData[spellID].coeff
 				
 				if( equippedSetCache["Skyshatter"] >= 4 ) then
 					healModifier = healModifier * 1.05
@@ -1453,10 +1485,10 @@ if( playerClass == "SHAMAN" ) then
 			-- Lesser Healing Wave
 			elseif( spellName == LesserHealingWave ) then
 				spellPower = spellPower + (playerCurrentRelic and lhwTotems[playerCurrentRelic] or 0)
-				spellPower = spellPower * spellData[spellName].coeff
+				spellPower = spellPower * spellData[spellID].coeff
 			end
 
-			healAmount = calculateGeneralAmount(spellData[spellName].levels[spellRank], healAmount, spellPower, spModifier, healModifier)
+			healAmount = calculateGeneralAmount(spellData[spellID].levels[spellRank], healAmount, spellPower, spModifier, healModifier)
 
 			-- Player has over a 100% chance to crit with Nature spells
 			if( GetSpellCritChance(4) >= 100 ) then
@@ -1473,8 +1505,9 @@ if( playerClass == "HUNTER" ) then
 	LoadClassData = function()
 		local MendPet = GetSpellInfo(136)
 
-		spellData[MendPet] = { interval = 1, levels = { 12, 20, 28, 36, 44, 52, 60 }, ticks = 5, averages = {100, 190, 340, 515, 710, 945, 1225 } }
-
+		--MendPet
+		AddSpell({ interval = 1, levels = { 12, 20, 28, 36, 44, 52, 60 }, ticks = 5, averages = {100, 190, 340, 515, 710, 945, 1225 } },
+			{136, 3111, 3661, 3662, 13542, 13543, 13544, 27046})
 		itemSetsData["Giantstalker"] = {16851, 16849, 16850, 16845, 16848, 16852, 16846, 16847}
 
 		GetHealTargets = function(bitType, guid, healAmount, spellID)
@@ -1483,11 +1516,11 @@ if( playerClass == "HUNTER" ) then
 
 		CalculateHealing = function(guid, spellID)
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
-			local amount = getBaseHealAmount(spellData, spellName, spellRank)
+			local amount = getBaseHealAmount(spellData, spellID, spellRank)
 
 			if( equippedSetCache["Giantstalker"] >= 3 ) then amount = amount * 1.1 end
 
-			return CHANNEL_HEALS, ceil(amount / spellData[spellName].ticks), spellData[spellName].ticks, spellData[spellName].interval
+			return CHANNEL_HEALS, ceil(amount / spellData[spellID].ticks), spellData[spellID].ticks, spellData[spellID].interval
 		end
 	end
 end
@@ -1498,8 +1531,12 @@ if( playerClass == "WARLOCK" ) then
 		local DrainLife = GetSpellInfo(689)
 		local ImpHealthFunnel = GetSpellInfo(18703)
 
-		spellData[HealthFunnel] = { interval = 1, levels = { 12, 20, 28, 36, 44, 52, 60, 68 }, ticks = 10, averages = { 120, 240, 430, 640, 890, 1190, 1530, 1880 } }
-		spellData[DrainLife] = { interval = 1, levels = { 14, 22, 30, 38, 46, 54, 62, 69 }, ticks = 5, averages = { 10 * 5, 17 * 5, 29 * 5, 41 * 5, 55 * 5, 71 * 5, 87 * 5, 108 * 5 } }
+		--HealthFunnel
+		AddSpell({ interval = 1, levels = { 12, 20, 28, 36, 44, 52, 60, 68 }, ticks = 10, averages = { 120, 240, 430, 640, 890, 1190, 1530, 1880 } },
+			{755, 3698, 3699, 3700, 11693, 11694, 11695, 27259})
+		--DrainLife
+		AddSpell({ interval = 1, levels = { 14, 22, 30, 38, 46, 54, 62, 69 }, ticks = 5, averages = { 10 * 5, 17 * 5, 29 * 5, 41 * 5, 55 * 5, 71 * 5, 87 * 5, 108 * 5 } },
+			{689, 699, 709, 7651, 11699, 11700, 27219, 27220})
 
 		talentData[ImpHealthFunnel] = { mod = 0.1, current = 0 }
 
@@ -1509,11 +1546,11 @@ if( playerClass == "WARLOCK" ) then
 
 		CalculateHealing = function(guid, spellID)
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
-			local amount = getBaseHealAmount(spellData, spellName, spellRank)
+			local amount = getBaseHealAmount(spellData, spellID, spellRank)
 
 			amount = amount * (1 + talentData[ImpHealthFunnel].current)
 
-			return CHANNEL_HEALS, ceil(amount / spellData[spellName].ticks), spellData[spellName].ticks, spellData[spellName].interval
+			return CHANNEL_HEALS, ceil(amount / spellData[spellID].ticks), spellData[spellID].ticks, spellData[spellID].interval
 		end
 	end
 end
@@ -2170,7 +2207,7 @@ function HealComm:COMBAT_LOG_EVENT_UNFILTERED(...)
 					end
 				end
 			end
-		elseif spellData[spellName] and spellData[spellName]._isChanneled then
+		elseif spellData[spellID] and spellData[spellID]._isChanneled then
 			local bitType, amount, totalTicks, tickInterval = CalculateHealing(destGUID, spellID, destUnit)
 			if bitType == CHANNEL_HEALS then
 				local targets, amt = compressGUID[destGUID], max(amount, 0)
@@ -2220,7 +2257,7 @@ function HealComm:COMBAT_LOG_EVENT_UNFILTERED(...)
 			if hotData[spellID] then
 				parseHealEnd(sourceGUID, pending, "id", spellID, false, compressGUID[destGUID])
 				sendMessage(format("HS::%d::%s", spellID, compressGUID[destGUID]))
-			elseif spellData[spellName] and spellData[spellName]._isChanneled then
+			elseif spellData[spellID] and spellData[spellID]._isChanneled then
 				parseHealEnd(sourceGUID, pending, "id", spellID, false, compressGUID[destGUID])
 				sendMessage(format("S::%d:0:%s", spellID, compressGUID[destGUID]))
 			end
@@ -2257,7 +2294,7 @@ function HealComm:UNIT_SPELLCAST_SENT(unit, targetName, castGUID, spellID)
 	local spellName = GetSpellInfo(spellID)
 	if(unit ~= "player") then return end
 
-	if hotData[spellID] or spellData[spellName] then
+	if hotData[spellID] or spellData[spellID] then
 		targetName = targetName or UnitName("player")
 
 		castTarget = gsub(targetName, "(.-)%-(.*)$", "%1")
@@ -2289,7 +2326,7 @@ function HealComm:UNIT_SPELLCAST_START(unit, cast, spellID)
 
 	local spellName = GetSpellInfo(spellID)
 
-	if (not spellData[spellName] or UnitIsCharmed("player") or not UnitPlayerControlled("player") ) then return end
+	if (not spellData[spellID] or UnitIsCharmed("player") or not UnitPlayerControlled("player") ) then return end
 
 	local castGUID = castGUIDs[spellID]
 	local castUnit = guidToUnit[castGUID]
@@ -2313,7 +2350,7 @@ function HealComm:UNIT_SPELLCAST_START(unit, cast, spellID)
 		parseDirectHeal(playerGUID, spellID, amt, (endTime - startTime) / 1000, strsplit(",", targets))
 		sendMessage(format("D:%.3f:%d:%d:%s", (endTime - startTime) / 1000, spellID or 0, amt or "", targets))
 	elseif( bitType == CHANNEL_HEALS ) then
-		spellData[spellName]._isChanneled = true
+		spellData[spellID]._isChanneled = true
 	end
 end
 
@@ -2329,7 +2366,7 @@ function HealComm:UNIT_SPELLCAST_SUCCEEDED(unit, cast, spellID)
 		hasDivineFavor = true
 	end
 
-	if spellData[spellName] and not spellData[spellName]._isChanneled then
+	if spellData[spellID] and not spellData[spellID]._isChanneled then
 		hasDivineFavor = nil
 		parseHealEnd(playerGUID, nil, "name", spellID, false)
 		sendMessage(format("S::%d:0", spellID or 0))
@@ -2341,7 +2378,7 @@ end
 
 function HealComm:UNIT_SPELLCAST_STOP(unit, castGUID, spellID)
 	local spellName = GetSpellInfo(spellID)
-	if( unit ~= "player" or not spellData[spellName] or spellData[spellName]._isChanneled ) then return end
+	if( unit ~= "player" or not spellData[spellID] or spellData[spellID]._isChanneled ) then return end
 
 	if not spellCastSucceeded[spellID] then
 		parseHealEnd(playerGUID, nil, "name", spellID, true)
@@ -2354,7 +2391,7 @@ end
 -- Cast didn't go through, recheck any charge data if necessary
 function HealComm:UNIT_SPELLCAST_INTERRUPTED(unit, castGUID, spellID)
 	local spellName = GetSpellInfo(spellID)
-	if( unit ~= "player" or not spellData[spellName] ) then return end
+	if( unit ~= "player" or not spellData[spellID] ) then return end
 
 	local guid = castGUIDs[spellID]
 	if( guid ) then
@@ -2663,8 +2700,10 @@ function HealComm:OnInitialize()
 	do
 		local FirstAid = GetSpellInfo(746)
 
-		spellData[FirstAid] = { ticks = {6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 10}, interval = 1, averages = {
-			66, 114, 161, 301, 400, 640, 800, 1104, 1360, 2000} }
+		--FirstAid
+		AddSpell({ticks = {6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 10, 8}, interval = 1,
+					averages = {66, 114, 161, 301, 400, 640, 800, 1104, 1360, 2000, 2800, 3400} },
+			{746, 1159, 3267, 3268, 7926, 7927, 10838, 10839, 18608, 18610, 23567, 23568, 23569, 23696, 24412, 24413, 24414, 27030, 27031, 30020})
 
 		local _GetHealTargets = GetHealTargets
 
@@ -2686,12 +2725,13 @@ function HealComm:OnInitialize()
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
 
 			if spellName == FirstAid then
-				local healAmount =  spellData[spellName].averages[spellRank]
+				print("spellName:", spellName, "spellRank:", spellRank, "spellID:", spellID)
+				local healAmount =  spellData[spellID].averages[spellRank]
 				if not healAmount then return end
 
-				local ticks = spellData[spellName].ticks[spellRank]
+				local ticks = spellData[spellID].ticks[spellRank]
 
-				return CHANNEL_HEALS, ceil(healAmount / ticks), ticks, spellData[spellName].interval
+				return CHANNEL_HEALS, ceil(healAmount / ticks), ticks, spellData[spellID].interval
 			end
 
 			if _CalculateHealing then
