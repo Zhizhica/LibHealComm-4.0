@@ -1448,7 +1448,7 @@ if( playerClass == "WARLOCK" ) then
 
 		GetHealTargets = function(bitType, guid, healAmount, spellID)
 			local spellName = GetSpellInfo(spellID)
-			if( spellName == HealthFunnel ) then
+			if ( spellName == HealthFunnel ) then
 				return compressGUID[UnitGUID("pet")], healAmount
 			elseif ( spellName == DrainLife ) then
 				return compressGUID[playerGUID], healAmount
@@ -2302,6 +2302,18 @@ function HealComm:UNIT_SPELLCAST_STOP(unit, castGUID, spellID)
 	spellCastSucceeded[spellID] = nil
 end
 
+function HealComm:UNIT_SPELLCAST_CHANNEL_STOP(unit, castGUID, spellID)
+	local spellName = GetSpellInfo(spellID)
+	if( unit ~= "player" or not spellData[spellName] ) then return end
+
+	if not spellCastSucceeded[spellName] then
+		parseHealEnd(playerGUID, nil, "name", spellID, true)
+		sendMessage(format("S::%d:1", spellID or 0))
+	end
+
+	spellCastSucceeded[spellID] = nil
+end
+
 -- Cast didn't go through, recheck any charge data if necessary
 function HealComm:UNIT_SPELLCAST_INTERRUPTED(unit, castGUID, spellID)
 	local spellName = GetSpellInfo(spellID)
@@ -2673,6 +2685,7 @@ function HealComm:OnInitialize()
 	self.eventFrame:RegisterEvent("UNIT_SPELLCAST_START")
 	self.eventFrame:RegisterEvent("UNIT_SPELLCAST_STOP")
 	self.eventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_START")
+	self.eventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_STOP")
 	self.eventFrame:RegisterEvent("UNIT_SPELLCAST_DELAYED")
 	self.eventFrame:RegisterEvent("UNIT_SPELLCAST_CHANNEL_UPDATE")
 	self.eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
