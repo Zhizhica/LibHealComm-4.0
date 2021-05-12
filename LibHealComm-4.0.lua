@@ -255,6 +255,7 @@ end
 
 -- Record management, because this is getting more complicted to deal with
 local function updateRecord(pending, guid, amount, stack, endTime, ticksLeft)
+
 	if( pending[guid] ) then
 		local id = pending[guid]
 
@@ -287,6 +288,7 @@ local function getRecord(pending, guid)
 end
 
 local function removeRecord(pending, guid)
+
 	local id = pending[guid]
 	if( not id ) then return nil end
 
@@ -316,6 +318,7 @@ local function removeRecord(pending, guid)
 end
 
 local function removeRecordList(pending, inc, comp, ...)
+
 	for i=1, select("#", ...), inc do
 		local guid = select(i, ...)
 		guid = comp and decompressGUID[guid] or guid
@@ -344,7 +347,6 @@ end
 -- Removes every mention to the given GUID
 local function removeAllRecords(guid)
 	local changed
-
 	for _, tbl in pairs({pendingHeals, pendingHots}) do
 		for _, spells in pairs(tbl) do
 			for _, pending in pairs(spells) do
@@ -395,6 +397,7 @@ HealComm.updateRecord = updateRecord
 
 -- Removes all pending heals, if it's a group that is causing the clear then we won't remove the players heals on themselves
 local function clearPendingHeals()
+
 	for _, tbl in pairs({pendingHeals, pendingHots}) do
 		for casterGUID, spells in pairs(tbl) do
 			for _, pending in pairs(spells) do
@@ -1541,7 +1544,13 @@ if( playerClass == "WARLOCK" ) then
 		talentData[ImpHealthFunnel] = { mod = 0.1, current = 0 }
 
 		GetHealTargets = function(bitType, guid, healAmount, spellID)
-			return compressGUID[UnitGUID("pet")], healAmount
+			local spellName = GetSpellInfo(spellID)
+			if( spellName == HealthFunnel ) then
+				return compressGUID[UnitGUID("pet")], healAmount
+			elseif ( spellName == DrainLife ) then
+				return compressGUID[playerGUID], healAmount
+			end
+			return compressGUID[guid], healAmount
 		end
 
 		CalculateHealing = function(guid, spellID)
@@ -1549,7 +1558,6 @@ if( playerClass == "WARLOCK" ) then
 			local amount = getBaseHealAmount(spellData, spellID, spellRank)
 
 			amount = amount * (1 + talentData[ImpHealthFunnel].current)
-
 			return CHANNEL_HEALS, ceil(amount / spellData[spellID].ticks), spellData[spellID].ticks, spellData[spellID].interval
 		end
 	end
@@ -1650,6 +1658,7 @@ end
 
 local alreadyAdded = {}
 function HealComm:UNIT_AURA(unit)
+
 	local guid = UnitGUID(unit)
 	if( not guidToUnit[guid] ) then return end
 	local increase, decrease, playerIncrease, playerDecrease = 1, 1, 1, 1
@@ -1765,7 +1774,6 @@ end
 -- Direct heal started
 local function loadHealList(pending, amount, stack, endTime, ticksLeft, ...)
 	wipe(tempPlayerList)
-
 	-- For the sake of consistency, even a heal doesn't have multiple end times like a hot, it'll be treated as such in the DB
 	if( amount ~= -1 and amount ~= "-1" ) then
 		amount = not pending.hasVariableTicks and amount or loadHealAmount(strsplit("@", amount))
@@ -1792,6 +1800,7 @@ local function loadHealList(pending, amount, stack, endTime, ticksLeft, ...)
 end
 
 local function parseDirectHeal(casterGUID, spellID, amount, castTime, ...)
+
 	local spellName = GetSpellInfo(spellID)
 	local unit = guidToUnit[casterGUID]
 
@@ -1866,6 +1875,7 @@ end
 -- When the person is within visible range of us, the aura is available by the time the message reaches the target
 -- as such, we can rely that at least one person is going to have the aura data on them (and that it won't be different, at least for this cast)
 local function findAura(casterGUID, spellID, ...)
+
 	for i = 1, select("#", ...) do
 		local guid = decompressGUID[select(i, ...)]
 		local unit = guid and guidToUnit[guid]
@@ -1886,6 +1896,7 @@ local function findAura(casterGUID, spellID, ...)
 end
 
 local function parseHotHeal(casterGUID, wasUpdated, spellID, tickAmount, totalTicks, tickInterval, ...)
+
 	local spellName = GetSpellInfo(spellID)
 	-- If the user is on 3.3, then anything without a total ticks attached to it is rejected
 	if( not tickAmount or not spellName or select("#", ...) == 0 ) then return end
@@ -1904,7 +1915,6 @@ local function parseHotHeal(casterGUID, wasUpdated, spellID, tickAmount, totalTi
 
 	pendingHots[casterGUID] = pendingHots[casterGUID] or {}
 	pendingHots[casterGUID][spellName] = pendingHots[casterGUID][spellName] or {}
-
 	local pending = pendingHots[casterGUID][spellName]
 	pending.duration = duration
 	pending.endTime = endTime
@@ -1928,6 +1938,7 @@ local function parseHotHeal(casterGUID, wasUpdated, spellID, tickAmount, totalTi
 end
 
 local function parseHotBomb(casterGUID, wasUpdated, spellID, amount, ...)
+
 	local spellName, spellRank = GetSpellInfo(spellID)
 	if( not amount or not spellName or select("#", ...) == 0 ) then return end
 	
@@ -1938,7 +1949,7 @@ local function parseHotBomb(casterGUID, wasUpdated, spellID, amount, ...)
 	
 	pendingHeals[casterGUID] = pendingHeals[casterGUID] or {}
 	pendingHeals[casterGUID][spellName] = pendingHeals[casterGUID][spellName] or {}
-	
+
 	local pending = pendingHeals[casterGUID][spellName]
 	pending.endTime = hotPending.endTime
 	pending.spellID = spellID
@@ -1956,6 +1967,7 @@ end
 
 -- Heal finished
 local function parseHealEnd(casterGUID, pending, checkField, spellID, interrupted, ...)
+
 	local spellName = GetSpellInfo(spellID)
 	if( not spellName or not casterGUID ) then return end
 
@@ -1974,6 +1986,7 @@ local function parseHealEnd(casterGUID, pending, checkField, spellID, interrupte
 	if( select("#", ...) == 0 ) then
 		for i=#(pending), 1, -5 do
 			tinsert(tempPlayerList, pending[i - 4])
+
 			removeRecord(pending, pending[i - 4])
 		end
 	else
@@ -1982,6 +1995,7 @@ local function parseHealEnd(casterGUID, pending, checkField, spellID, interrupte
 
 			if guid then
 				tinsert(tempPlayerList, guid)
+
 				removeRecord(pending, guid)
 			end
 		end
@@ -2007,6 +2021,7 @@ HealComm.parseHealEnd = parseHealEnd
 
 -- Heal delayed
 local function parseHealDelayed(casterGUID, startTimeRelative, endTimeRelative, spellID)
+
 	local spellName = GetSpellInfo(spellID)
 	local startTime = startTimeRelative + GetTime()
 	local endTime = endTimeRelative + GetTime()
@@ -2042,6 +2057,7 @@ end
 -- Channels use tick total because the tick interval varies by haste
 -- Hots use tick interval because the total duration varies but the tick interval stays the same
 function HealComm:CHAT_MSG_ADDON(prefix, message, channel, sender)
+
 	if( prefix ~= COMM_PREFIX or channel ~= distribution ) then return end
 
 	local commType, extraArg, spellID, arg1, arg2, arg3, arg4 = strsplit(":", message)
@@ -2096,6 +2112,7 @@ HealComm.bucketFrame = HealComm.bucketFrame or CreateFrame("Frame")
 HealComm.bucketFrame:Hide()
 
 HealComm.bucketFrame:SetScript("OnUpdate", function(self, elapsed)
+
 	local totalLeft = 0
 	for casterGUID, spells in pairs(bucketHeals) do
 		for _, data in pairs(spells) do
@@ -2186,7 +2203,6 @@ function HealComm:COMBAT_LOG_EVENT_UNFILTERED(...)
 				HealComm.callbacks:Fire("HealComm_HealUpdated", sourceGUID, spellID, pending.bitType, endTime, destGUID)
 			end
 		end
-
 	-- New hot was applied
 	elseif( ( eventType == "SPELL_AURA_APPLIED" or eventType == "SPELL_AURA_REFRESH" or eventType == "SPELL_AURA_APPLIED_DOSE" ) and bit.band(sourceFlags, COMBATLOG_OBJECT_AFFILIATION_MINE) == COMBATLOG_OBJECT_AFFILIATION_MINE ) then
 		if( hotData[spellID] ) then
@@ -2210,7 +2226,7 @@ function HealComm:COMBAT_LOG_EVENT_UNFILTERED(...)
 		elseif spellData[spellID] and spellData[spellID]._isChanneled then
 			local bitType, amount, totalTicks, tickInterval = CalculateHealing(destGUID, spellID, destUnit)
 			if bitType == CHANNEL_HEALS then
-				local targets, amt = compressGUID[destGUID], max(amount, 0)
+				local targets, amt = GetHealTargets(type, destGUID, max(amount, 0), spellID)
 				if targets then
 					local endTime = select(5, ChannelInfo())
 					if endTime then
@@ -2276,7 +2292,9 @@ local castGUIDs, guidPriorities = {}, {}
 -- Why a table when you can only cast one spell at a time you ask? When you factor in lag and mash clicking it's possible to:
 -- cast A, interrupt it, cast B and have A fire SUCEEDED before B does, the tables keeps it from bugging out
 local function setCastData(priority, name, guid)
+
 	if( not guid or not lastSentID ) then return end
+
 	if( guidPriorities[lastSentID] and guidPriorities[lastSentID] >= priority ) then return end
 
 	-- This is meant as a way of locking a cast in because which function has accurate data can be called into question at times, one of them always does though
@@ -2291,6 +2309,7 @@ end
 -- When the game tries to figure out the UnitID from the name it will prioritize players over non-players
 -- if there are conflicts in names it will pull the one with the least amount of current health
 function HealComm:UNIT_SPELLCAST_SENT(unit, targetName, castGUID, spellID)
+
 	local spellName = GetSpellInfo(spellID)
 	if(unit ~= "player") then return end
 
@@ -2322,6 +2341,7 @@ function HealComm:UNIT_SPELLCAST_SENT(unit, targetName, castGUID, spellID)
 end
 
 function HealComm:UNIT_SPELLCAST_START(unit, cast, spellID)
+
 	if( unit ~= "player") then return end
 
 	local spellName = GetSpellInfo(spellID)
@@ -2330,10 +2350,15 @@ function HealComm:UNIT_SPELLCAST_START(unit, cast, spellID)
 
 	local castGUID = castGUIDs[spellID]
 	local castUnit = guidToUnit[castGUID]
-	if isTBC and not castUnit and spellID == 32546 and castGUID == UnitGUID("target") then
+	
+	--Binding Heal and 8 ranks of Drain Life
+	local healToSelf = Set(true, {32546, 689, 699, 709, 7651, 11699, 11700, 27219, 27220})
+	
+	if isTBC and not castUnit and healToSelf[spellID] and castGUID == UnitGUID("target") then
 		castGUID = UnitGUID("player")
 		castUnit = "player"
 	end
+	
 	if( not castGUID or not castUnit ) then
 		return
 	end
@@ -2377,6 +2402,7 @@ function HealComm:UNIT_SPELLCAST_SUCCEEDED(unit, cast, spellID)
 end
 
 function HealComm:UNIT_SPELLCAST_STOP(unit, castGUID, spellID)
+
 	local spellName = GetSpellInfo(spellID)
 	if( unit ~= "player" or not spellData[spellID] or spellData[spellID]._isChanneled ) then return end
 
@@ -2400,6 +2426,7 @@ function HealComm:UNIT_SPELLCAST_INTERRUPTED(unit, castGUID, spellID)
 end
 
 function HealComm:UNIT_SPELLCAST_DELAYED(unit, castGUID, spellID)
+
 	local spellName = GetSpellInfo(spellID)
 	local casterGUID = UnitGUID(unit)
 	if( unit ~= "player" or not pendingHeals[casterGUID] or not pendingHeals[casterGUID][spellName] ) then return end
@@ -2451,6 +2478,7 @@ end
 
 -- Unit was targeted through a function
 function HealComm:Target(unit)
+
 	if( self.resetFrame:IsShown() and UnitCanAssist("player", unit) ) then
 		setCastData(6, UnitName(unit), UnitGUID(unit))
 	end
@@ -2497,6 +2525,7 @@ end
 
 -- Spell was cast somehow
 function HealComm:CastSpell(arg, unit)
+
 	-- If the spell is waiting for a target and it's a spell action button then we know that the GUID has to be mouseover or a key binding cast.
 	if( unit and UnitCanAssist("player", unit)  ) then
 		setCastData(4, UnitName(unit), UnitGUID(unit))
@@ -2520,6 +2549,7 @@ HealComm.UseAction = HealComm.CastSpell
 
 -- Make sure we don't have invalid units in this
 local function sanityCheckMapping()
+
 	for guid, unit in pairs(guidToUnit) do
 		-- Unit no longer exists, remove all healing for them
 		if guid ~= UnitGUID(unit) then
@@ -2604,6 +2634,7 @@ end
 
 -- Keeps track of pet GUIDs, as pets are considered vehicles this will also map vehicle GUIDs to unit
 function HealComm:UNIT_PET(unit)
+
 	local guid = UnitGUID(unit)
 	unit = guidToUnit[guid]
 
@@ -2632,6 +2663,7 @@ end
 
 -- Keep track of raid GUIDs
 function HealComm:GROUP_ROSTER_UPDATE()
+
 	updateDistributionChannel()
 
 	wipe(activePets)
@@ -2701,7 +2733,7 @@ function HealComm:OnInitialize()
 		local FirstAid = GetSpellInfo(746)
 
 		--FirstAid
-		AddSpell({ticks = {6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 10, 8}, interval = 1,
+		AddSpell({ticks = {6, 6, 7, 7, 8, 8, 8, 8, 8, 8, 8, 8, 8}, interval = 1,
 					averages = {66, 114, 161, 301, 400, 640, 800, 1104, 1360, 2000, 2800, 3400} },
 			{746, 1159, 3267, 3268, 7926, 7927, 10838, 10839, 18608, 18610, 23567, 23568, 23569, 23696, 24412, 24413, 24414, 27030, 27031, 30020})
 
@@ -2725,7 +2757,6 @@ function HealComm:OnInitialize()
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
 
 			if spellName == FirstAid then
-				print("spellName:", spellName, "spellRank:", spellRank, "spellID:", spellID)
 				local healAmount =  spellData[spellID].averages[spellRank]
 				if not healAmount then return end
 
