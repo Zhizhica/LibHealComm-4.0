@@ -82,7 +82,7 @@ local spellRankTableData = {
 	[5] = { 2091, 8941, 5189, 1042, 19942, 6077, 22009, 25314, 25316, 10915, 939, 10467, 13542, 11693, 11699, 7926, 25423, 26983 },
 	[6] = { 3627, 9750, 6778, 3472, 19943, 6078, 10916, 959, 10468, 13543, 11694, 11700, 7927, 23569, 24412, 25210, 25308 },
 	[7] = { 8910, 9856, 8903, 10328, 10927, 10917, 8005, 13544, 11695, 10838, 27137, 25213, 25420, 27219 },
-	[8] = { 9839, 9857, 9758, 10329, 10928, 10395, 10839, 23568, 24413, 25233, 27259, 27220 },
+	[8] = { 9839, 9857, 9758, 10329, 10928, 10395, 10839, 23568, 24413, 25233, 27259, 27220, 27046 },
 	[9] = { 9840, 9858, 9888, 25292, 10929, 10396, 18608, 25235 },
 	[10] = { 9841, 9889, 25315, 25357, 18610, 23567, 24414, 26980, 27135 },
 	[11] = { 25299, 25297, 30020, 27136, 25221, 25391, 27030 },
@@ -1505,7 +1505,7 @@ if( playerClass == "HUNTER" ) then
 		local MendPet = GetSpellInfo(136)
 
 		--MendPet
-		AddSpell({ interval = 1, levels = { 12, 20, 28, 36, 44, 52, 60 }, ticks = 5, averages = {100, 190, 340, 515, 710, 945, 1225 } },
+		AddHot({ interval = 3, levels = { 12, 20, 28, 36, 44, 52, 60, 68 }, ticks = 5, averages = {125, 250, 340, 450, 700, 1000, 1825, 2375} },
 			{136, 3111, 3661, 3662, 13542, 13543, 13544, 27046})
 		itemSetsData["Giantstalker"] = {16851, 16849, 16850, 16845, 16848, 16852, 16846, 16847}
 
@@ -1513,13 +1513,13 @@ if( playerClass == "HUNTER" ) then
 			return compressGUID[UnitGUID("pet")], healAmount
 		end
 
-		CalculateHealing = function(guid, spellID)
+		CalculateHotHealing = function(guid, spellID)
 			local spellName, spellRank = GetSpellInfo(spellID), SpellIDToRank[spellID]
-			local amount = getBaseHealAmount(spellData, spellID, spellRank)
+			local amount = getBaseHealAmount(hotData, spellID, spellRank)
 
 			if( equippedSetCache["Giantstalker"] >= 3 ) then amount = amount * 1.1 end
-
-			return CHANNEL_HEALS, ceil(amount / spellData[spellID].ticks), spellData[spellID].ticks, spellData[spellID].interval
+			local ticks = hotData[spellID].ticks
+			return HOT_HEALS, ceil(amount / ticks), ticks, hotData[spellID].interval
 		end
 	end
 end
