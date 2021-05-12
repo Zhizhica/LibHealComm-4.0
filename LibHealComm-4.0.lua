@@ -1447,7 +1447,13 @@ if( playerClass == "WARLOCK" ) then
 		talentData[ImpHealthFunnel] = { mod = 0.1, current = 0 }
 
 		GetHealTargets = function(bitType, guid, healAmount, spellID)
-			return compressGUID[UnitGUID("pet")], healAmount
+			local spellName = GetSpellInfo(spellID)
+			if( spellName == HealthFunnel ) then
+				return compressGUID[UnitGUID("pet")], healAmount
+			elseif ( spellName == DrainLife ) then
+				return compressGUID[playerGUID], healAmount
+			end
+			return compressGUID[guid], healAmount
 		end
 
 		CalculateHealing = function(guid, spellID)
@@ -2116,7 +2122,7 @@ function HealComm:COMBAT_LOG_EVENT_UNFILTERED(...)
 		elseif spellData[spellName] and spellData[spellName]._isChanneled then
 			local bitType, amount, totalTicks, tickInterval = CalculateHealing(destGUID, spellID, destUnit)
 			if bitType == CHANNEL_HEALS then
-				local targets, amt = compressGUID[destGUID], max(amount, 0)
+				local targets, amt = GetHealTargets(type, destGUID, max(amount, 0), spellID)
 				if targets then
 					local endTime = select(5, ChannelInfo())
 					if endTime then
@@ -2236,9 +2242,11 @@ function HealComm:UNIT_SPELLCAST_START(unit, cast, spellID)
 
 	local castGUID = castGUIDs[spellID]
 	local castUnit = guidToUnit[castGUID]
-	if isTBC and not castUnit and spellID == 32546 and castGUID == UnitGUID("target") then
-		castGUID = UnitGUID("player")
-		castUnit = "player"
+	if isTBC and not castUnit and castGUID == UnitGUID("target") then
+		if spellID == 32546 or spellName == GetSpellInfo(689) then
+			castGUID = UnitGUID("player")
+			castUnit = "player"
+		end
 	end
 	if( not castGUID or not castUnit ) then
 		return
